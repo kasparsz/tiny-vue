@@ -1,0 +1,44 @@
+{
+  "name": "@kasparsz/tiny-vue",
+  "version": "0.1.0",
+  "description": "Minimalistic subset of Vue implementation which generates custom elements",
+  "keywords": [
+    "minimalistic",
+    "vue",
+    "custom elements"
+  ],
+  "main": "./dist/tiny-vue.umd.cjs",
+  "module": "./dist/tiny-vue.js",
+  "types": "./dist/tiny-vue.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/tiny-vue.js",
+      "types": "./dist/tiny-vue.d.ts",
+      "default": "./dist/tiny-vue.umd.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "author": "Kaspars Zuks",
+  "license": "ISC",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0",
+    "vite-plugin-dts": "^4.5.3"
+  },
+  "dependencies": {
+    "@webreflection/signal": "^2.1.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kasparsz/tiny-vue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kasparsz/tiny-vue/issues"
+  }
+}
