@@ -17,6 +17,16 @@ npm install @kasparsz/tiny-vue
 ## ToDo list
 
 * `emit()`
+* `v-if`, `v-else`, `v-else-if`
+* named slots
+* don't use Shadow DOM, it breaks styling
+* CSS styles
+
+## Beyond the scope / won't implement
+
+* `:is="..."`
+* `<Transition>`
+* `<TransitionGroup>`
 
 ## Example
 
