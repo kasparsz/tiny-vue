@@ -16,7 +16,6 @@ npm install @kasparsz/tiny-vue
 
 ## ToDo list
 
-* `emit()`
 * `v-if`, `v-else`, `v-else-if`
 * named slots
 * don't use Shadow DOM, it breaks styling
@@ -37,12 +36,12 @@ import { defineComponent } from '@kasparsz/tiny-vue';
 Additional functions which can be imported.
 
 ```js
-import { defineComponent, ref, reactive, computed, effect } from '@kasparsz/tiny-vue';
+import { defineComponent, ref, reactive, computed, watchEffect, onMounted, onUnmounted, useTemplateRef, defineProps, defineExpose, defineEmits, render } from '@kasparsz/tiny-vue';
 ```
 
 Create component
 ```js
-defineComponent('example-heading', ({ defineProps, render }) => {
+defineComponent('example-heading', () => {
     const props = defineProps({ title: '' });
 
     // Template is rendered using `render(templateString, bindings)`
@@ -63,7 +62,7 @@ defineComponent('example-heading', ({ defineProps, render }) => {
 ```
 
 ```js
-defineComponent('example-component', ({ defineProps, defineExpose, useTemplateRef, render, computed, ref, onMounted, onUnmounted }) => {
+defineComponent('example-component', () => {
     // `props` will contain all passed in props, including HTML element attributes
     const props = defineProps({
         title: '',

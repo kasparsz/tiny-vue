@@ -1,6 +1,6 @@
 {
   "name": "@kasparsz/tiny-vue",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimalistic subset of Vue implementation which generates custom elements",
   "keywords": [
     "minimalistic",

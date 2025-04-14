@@ -1,14 +1,15 @@
-import { defineComponent, ref } from './index';
+import { defineComponent, ref, computed, onMounted, onUnmounted, useTemplateRef, defineProps, defineExpose, defineEmits, render } from './index';
 
 (window as any).defineComponent = defineComponent;
 
-defineComponent('example-heading', ({ defineProps, render }) => {
+defineComponent('example-heading', () => {
     const props = defineProps({ title: '' });
+    const emit = defineEmits();
 
     // Template is rendered using `render(templateString, bindings)`
     return render(`
         <div>
-            <h1>
+            <h1 @click="onClick">
                 {{ title }}
             </h1>
             <p>
@@ -18,10 +19,13 @@ defineComponent('example-heading', ({ defineProps, render }) => {
     `, {
         // Pass all used props, variables, etc.
         title: props.title,
+        onClick: () => {
+            emit('clicked', 'Arg 1', { arg2: 'Arg 2' });
+        },
     });
 });
 
-const exampleComponent = defineComponent('example-component', ({ defineProps, defineExpose, useTemplateRef, render, computed, ref, onMounted, onUnmounted }) => {
+const exampleComponent = defineComponent('example-component', () => {
     // `props` will contain all passed in props, including HTML element attributes
     const props = defineProps({
         title: '',
@@ -46,6 +50,10 @@ const exampleComponent = defineComponent('example-component', ({ defineProps, de
     // Event listeners
     const onClick = (event: MouseEvent) => {
         console.log('Clicked', event);
+    };
+
+    const onHeadingClicked = (...args: any[]) => {
+        console.log('Heading clicked', args);
     };
 
     // When component is mounted template element references exist
@@ -74,7 +82,7 @@ const exampleComponent = defineComponent('example-component', ({ defineProps, de
             <p>Timer: {{ timer }}</p>
             <div v-for="i in items">
                 <div v-html="'This is v-html content <i>index: ' + i + '</i>, timer: <b>' + timer + '</b>'"></div>
-                <example-heading :title="title + ' ' + i + ' ' + timer">
+                <example-heading :title="title + ' ' + i + ' ' + timer" @clicked="onHeadingClicked">
                     This is heading slot content {{ timer }}
                 </example-heading>
             </div>
@@ -86,6 +94,7 @@ const exampleComponent = defineComponent('example-component', ({ defineProps, de
         fullTitle,
         timer,
         onClick,
+        onHeadingClicked,
     });
 });
 

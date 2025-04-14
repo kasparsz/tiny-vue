@@ -15,6 +15,7 @@ export type RenderResult = {
 type ReplacementResult = () => void;
 
 const SPLIT_CHAR = 'ᦌ￝';
+const ATTR_V_HTML = 'v-html';
 
 enum DOMPlacement {
     INSERT_AFTER,
@@ -80,10 +81,10 @@ function resultToString(result: string|any) {
  * Find stuff to replace in a text node
  *
  * @param node - Text node
- * @param data - Data
+ * @param bindings - Bindings
  * @returns
  */
-function findStringReplacements(node: Node, data: any): ReplacementResult[] {
+function findStringReplacements(node: Node, bindings: any): ReplacementResult[] {
     const text = node.textContent;
 
     if (text && text.includes('{{')) {
@@ -91,7 +92,7 @@ function findStringReplacements(node: Node, data: any): ReplacementResult[] {
         const replacements:Array<() => any> = [];
         const textParts = text.replace(/{{(.*?)}}/g, (_, content) => {
             // Convert expression to actual function
-            const fn = new Function(`with(this){return ${content.trim()}}`).bind(data);
+            const fn = new Function(`with(this){return ${content.trim()}}`).bind(bindings);
             replacements.push(fn);
             return SPLIT_CHAR;
         }).split(SPLIT_CHAR);
@@ -114,43 +115,43 @@ function findStringReplacements(node: Node, data: any): ReplacementResult[] {
     }
 }
 
-function addEventListener(node:Element, eventName: string, callbackName: string, data: any) {
+function addEventListener(node:Element, eventName: string, callbackName: string, bindings: any) {
     node.addEventListener(eventName, function (event) {
-        if (callbackName in data && typeof data[callbackName] === 'function') {
-            return data[callbackName].call(data, event);
+        if (callbackName in bindings && typeof bindings[callbackName] === 'function') {
+            if ((event as CustomEvent)?.detail?.tinyVue) {
+                return bindings[callbackName].apply(bindings, (event as CustomEvent).detail.args);
+            } else {
+                return bindings[callbackName].call(bindings, event);
+            }
         }
     });
 }
 
-function addAttribute(node: Element, attributeName: string, expression: string, data: any) {
+function addAttribute(node: Element, attributeName: string, expression: string, bindings: any) {
     let attributeValue = node.getAttribute(attributeName) || '';
     attributeValue = attributeValue ? attributeValue + ' ' : '';
 
-    const fn = new Function('_n', '_an', '_av', '_f', '_h', `with(this){
-        _h
-            ? _n.innerHTML = _f(${expression})
-            : _n.setAttribute(_an,_av+_f(${expression}))}
-    `).bind(data, node, attributeName, attributeValue, resultToAttributeValue, attributeName === 'v-html');
+    const fn = new Function('_n', '_an', '_av', '_f', '_h', `with(this){_h?_n.innerHTML=_f(${expression}):_n.setAttribute(_an,_av+_f(${expression}))}`).bind(bindings, node, attributeName, attributeValue, resultToAttributeValue, attributeName === ATTR_V_HTML);
     return effect(fn);
 }
 
-function addProp(node: Element, attributeName: string, expression: string, data: any) {
+function addProp(node: Element, attributeName: string, expression: string, bindings: any) {
     let attributeValue = node.getAttribute(attributeName) || '';
     attributeValue = attributeValue ? attributeValue + ' ' : '';
 
-    const fn = new Function(`with(this){ return ${expression} }`).bind(data);
+    const fn = new Function(`with(this){ return ${expression} }`).bind(bindings);
     return computed(fn);
 }
 
-function addConditional(node: Element, expression: string, data: any) {
-    const fn = new Function('_n', `with(this){_n.style.display=(${expression})?'':'none'}`).bind(data, node);
+function addConditional(node: Element, expression: string, bindings: any) {
+    const fn = new Function('_n', `with(this){_n.style.display=(${expression})?'':'none'}`).bind(bindings, node);
     return effect(fn);
 }
 
-function addFor(node: Element, attributeName: string, data: any, refs: any, customComponents: Set<string>):ReplacementResult {
+function addFor(node: Element, attributeName: string, bindings: any, refs: any, customComponents: Set<string>):ReplacementResult {
     const [key, value] = attributeName.split(' in ');
     const placement = getDOMPlacement(node);
-    const getListValue = new Function(`with(this){return ${value}}`).bind(data);
+    const getListValue = new Function(`with(this){return ${value}}`).bind(bindings);
 
     // Remove node from the DOM
     node.remove();
@@ -172,8 +173,8 @@ function addFor(node: Element, attributeName: string, data: any, refs: any, cust
                 list.forEach((item) => {
                     const element = node.cloneNode(true);
                     const templateElement = { childNodes: [element] } as unknown as HTMLElement;
-                    const itemData = reactive(data, { [key]: item });
-                    const disposeCallbacks = renderElement(templateElement, itemData, refs, customComponents);
+                    const itemBindings = reactive(bindings, { [key]: item });
+                    const disposeCallbacks = renderElement(templateElement, itemBindings, refs, customComponents);
 
                     if (lastListItem) {
                         lastListItem.after(element as HTMLElement);
@@ -195,10 +196,10 @@ function addFor(node: Element, attributeName: string, data: any, refs: any, cust
  * Attach event listeners
  *
  * @param node - Element
- * @param data - Data
+ * @param bindings - Bindings
  * @param refs - TemplateRefs
  */
-function findAttributeReplacements(node: Element, data: any, refs: any, customComponents: Set<string>):ReplacementResult[] {
+function findAttributeReplacements(node: Element, bindings: any, refs: any, customComponents: Set<string>):ReplacementResult[] {
     const attributes = node.attributes;
     const dispose = [];
     const isCustomComponent = customComponents.has(node.localName);
@@ -210,18 +211,18 @@ function findAttributeReplacements(node: Element, data: any, refs: any, customCo
         const value = attribute.value;
 
         if (name === 'v-show') {
-            dispose.push(addConditional(node, value, data));
+            dispose.push(addConditional(node, value, bindings));
         } else if (name === 'v-hide') {
-            dispose.push(addConditional(node, `!(${ value })`, data));
+            dispose.push(addConditional(node, `!(${ value })`, bindings));
         } else if (name.startsWith('@')) {
-            addEventListener(node, name.substring(1), value, data);
-        } else if (name.startsWith(':') || name === 'v-html') {
-            const propName = name === 'v-html' ? name : name.substring(1);
+            addEventListener(node, name.substring(1), value, bindings);
+        } else if (name.startsWith(':') || name === ATTR_V_HTML) {
+            const propName = name === ATTR_V_HTML ? name : name.substring(1);
 
             if (isCustomComponent) {
-                customComponentProps[propName] = addProp(node, propName, value, data);
+                customComponentProps[propName] = addProp(node, propName, value, bindings);
             } else {
-                dispose.push(addAttribute(node, propName, value, data));
+                dispose.push(addAttribute(node, propName, value, bindings));
             }
         } else if (name === 'ref') {
             if (value in refs) {
@@ -245,19 +246,19 @@ function findAttributeReplacements(node: Element, data: any, refs: any, customCo
     }
 
     if (isCustomComponent) {
-        (node as any).tinyVueInit(customComponentProps);
+        (node as any).tinyVue(customComponentProps);
     }
 
     return dispose;
 }
 
-function renderElement(templateElement: HTMLElement, data: any, refs: any, customComponents: Set<string>): ReplacementResult[] {
+function renderElement(templateElement: HTMLElement, bindings: any, refs: any, customComponents: Set<string>): ReplacementResult[] {
     const disposeList:Array<() => void> = [];
 
     traverseDOM(templateElement, (node, _index) => {
         if (node.nodeType === Node.TEXT_NODE) {
             // Replace strings
-            findStringReplacements(node, data)
+            findStringReplacements(node, bindings)
                 .forEach((dispose) => disposeList.push(dispose));
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as Element;
@@ -266,12 +267,12 @@ function renderElement(templateElement: HTMLElement, data: any, refs: any, custo
             if (vForValue) {
                 element.removeAttribute('v-for');
                 disposeList.push(
-                    addFor(element, vForValue, data, refs, customComponents)
+                    addFor(element, vForValue, bindings, refs, customComponents)
                 );
                 return false;
             } else {
                 // Attribute replacements
-                findAttributeReplacements(element, data, refs, customComponents)
+                findAttributeReplacements(element, bindings, refs, customComponents)
                     .forEach((dispose) => disposeList.push(dispose));
             }
         }
@@ -284,13 +285,15 @@ function renderElement(templateElement: HTMLElement, data: any, refs: any, custo
  * Render template as HTMLElement
  *
  * @param template - Template
- * @param data - Data
+ * @param bindings - Bindings
+ * @param refs - TemplateRefs
+ * @param customComponents - Custom components
  */
-export function render(template: string, data: any, refs: TemplateRefs, customComponents: Set<string>): RenderResult {
+export function renderTemplate(template: string, bindings: any, refs: TemplateRefs, customComponents: Set<string>): RenderResult {
     const templateElement = document.createElement('div');
     templateElement.innerHTML = template;
 
-    const disposeList = renderElement(templateElement, data, refs, customComponents);
+    const disposeList = renderElement(templateElement, bindings, refs, customComponents);
     const element = templateElement.firstElementChild;
 
     if (element) {
