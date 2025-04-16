@@ -29,6 +29,7 @@ const exampleComponent = defineComponent('example-component', () => {
     // `props` will contain all passed in props, including HTML element attributes
     const props = defineProps({
         title: '',
+        texts: [],
         count: 0
     });
 
@@ -79,9 +80,22 @@ const exampleComponent = defineComponent('example-component', () => {
     render(`
         <div ref="root" class="component" :class="className">
             <h1 @click="onClick">{{ fullTitle }}</h1>
-            <p>Timer: {{ timer }}</p>
-            <div v-for="i in items">
-                <div v-html="'This is v-html content <i>index: ' + i + '</i>, timer: <b>' + timer + '</b>'"></div>
+            <p>
+                Timer: {{ timer }} ({{ timer % 2 ? 'odd' : 'even' }})<br />
+                Text count: {{ withTexts.value ? texts.length : 0 }}<br />
+                Item count: {{ withItems.value ? items.length : 0 }}
+            </p>
+            <p v-if="(timer % 2) && withTimerText.value">
+                v-if: Timer is odd
+            </p>
+            <p v-else>
+                v-else: Timer is even
+            </p>
+            <p v-for="text in (withTexts.value ? texts : [])" style="border: 1px dashed #ccc; padding: 10px;">
+                v-for: {{ text }}: {{ timer }}
+            </p>
+            <div v-for="i in (withItems.value ? items : [])" style="border: 1px solid #ccc; padding: 10px;">
+                <div v-html="'v-for: This is v-html content <i>index: ' + i + '</i>, timer: <b>' + timer + '</b>'"></div>
                 <example-heading :title="title + ' ' + i + ' ' + timer" @clicked="onHeadingClicked">
                     This is heading slot content {{ timer }}
                 </example-heading>
@@ -98,9 +112,15 @@ const exampleComponent = defineComponent('example-component', () => {
     });
 });
 
+
+(window as any).withTimerText = ref(true);
+(window as any).withTexts = ref(true);
+(window as any).withItems = ref(true);
+
 // We can also define props as reactive which allows us to change values later
 const props = {
     title: ref('John'),
+    texts: ref<string[]>([]),
     count: ref(5),
 };
 
@@ -112,3 +132,15 @@ setTimeout(() => {
     props.title.value = 'Jane';
     props.count.value = 2;
 }, 2000);
+
+setTimeout(() => {
+    props.texts.value = ['Text 1', 'Text 2', 'Text 3'];
+}, 4000);
+
+setTimeout(() => {
+    props.count.value = 0;
+}, 6000);
+
+setTimeout(() => {
+    props.count.value = 2;
+}, 8000);

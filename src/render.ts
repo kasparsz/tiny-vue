@@ -6,6 +6,11 @@ import type { Computed } from '@webreflection/signal';
 export type TemplateRef = Signal<HTMLElement|HTMLElement[]|undefined>;
 export type TemplateRefs = Record<string, TemplateRef>;
 
+type DynamicNode = () => Placement|DynamicNode;
+type DynamicNodeMap = Map<ChildNode|Element, DynamicNode>;
+
+type Placement = [DOMPlacement, ChildNode];
+
 export type RenderResult = {
     refs: TemplateRefs,
     element: Node,
@@ -22,15 +27,29 @@ enum DOMPlacement {
     PREPEND
 }
 
-function getDOMPlacement(node: Node): [DOMPlacement, ChildNode]|undefined {
+function evaluateExpression(expression: string, bindings: any) {
+    return new Function(`with(this){return ${expression}}`).bind(bindings);
+}
+
+function getDOMPlacement(node: Node, dynamicNodes: DynamicNodeMap): Placement|DynamicNode {
     if (node.previousSibling) {
-        return [DOMPlacement.INSERT_AFTER, node.previousSibling];
+        if (dynamicNodes.has(node.previousSibling)) {
+            return dynamicNodes.get(node.previousSibling) as DynamicNode;
+        } else {
+            return [DOMPlacement.INSERT_AFTER, node.previousSibling];
+        }
     } else if (node.parentElement) {
         return [DOMPlacement.PREPEND, node.parentElement];
+    } else {
+        throw new Error('Node has no parent element');
     }
 }
-function restoreDOMPlacement(node: Node, placement?: [DOMPlacement, ChildNode]) {
+function restoreDOMPlacement(node: Node, placement?: Placement|DynamicNode) {
     if (placement) {
+        while (typeof placement === 'function') {
+            placement = placement();
+        }
+
         if (placement[0] === DOMPlacement.INSERT_AFTER) {
             (placement[1] as HTMLElement).after(node);
         } else if (placement[0] === DOMPlacement.PREPEND) {
@@ -46,8 +65,10 @@ function restoreDOMPlacement(node: Node, placement?: [DOMPlacement, ChildNode]) 
  * @param callback Callback function
  */
 function traverseDOM(element: Node, callback: (element: Node, index: number) => void|boolean) {
-    for (let i = 0; i < element.childNodes.length; i++) {
-        const child = element.childNodes[i];
+    const nodes = Array.from(element.childNodes);
+
+    for (let i = 0; i < nodes.length; i++) {
+        const child = nodes[i];
         const continueTraverse = callback(child, i);
 
         if (continueTraverse !== false && child.nodeType === Node.ELEMENT_NODE) {
@@ -92,7 +113,7 @@ function findStringReplacements(node: Node, bindings: any): ReplacementResult[] 
         const replacements:Array<() => any> = [];
         const textParts = text.replace(/{{(.*?)}}/g, (_, content) => {
             // Convert expression to actual function
-            const fn = new Function(`with(this){return ${content.trim()}}`).bind(bindings);
+            const fn = evaluateExpression(content.trim(), bindings);
             replacements.push(fn);
             return SPLIT_CHAR;
         }).split(SPLIT_CHAR);
@@ -131,42 +152,102 @@ function addAttribute(node: Element, attributeName: string, expression: string, 
     let attributeValue = node.getAttribute(attributeName) || '';
     attributeValue = attributeValue ? attributeValue + ' ' : '';
 
-    const fn = new Function('_n', '_an', '_av', '_f', '_h', `with(this){_h?_n.innerHTML=_f(${expression}):_n.setAttribute(_an,_av+_f(${expression}))}`).bind(bindings, node, attributeName, attributeValue, resultToAttributeValue, attributeName === ATTR_V_HTML);
-    return effect(fn);
+    const fn = evaluateExpression(expression, bindings);
+
+    if (attributeName === ATTR_V_HTML) {
+        return effect(() => {
+            (node as HTMLElement).innerHTML = resultToString(fn());
+        });
+    } else {
+        return effect(() => {
+            (node as HTMLElement).setAttribute(attributeName, attributeValue + resultToAttributeValue(fn()));
+        });
+    }
 }
 
 function addProp(node: Element, attributeName: string, expression: string, bindings: any) {
     let attributeValue = node.getAttribute(attributeName) || '';
     attributeValue = attributeValue ? attributeValue + ' ' : '';
 
-    const fn = new Function(`with(this){ return ${expression} }`).bind(bindings);
+    const fn = evaluateExpression(expression, bindings);
     return computed(fn);
 }
 
 function addConditional(node: Element, expression: string, bindings: any) {
-    const fn = new Function('_n', `with(this){_n.style.display=(${expression})?'':'none'}`).bind(bindings, node);
-    return effect(fn);
+    const fn = evaluateExpression(expression, bindings);
+    return effect(() => {
+        (node as HTMLElement).style.display = fn() ? '' : 'none';
+    });
 }
 
-function addFor(node: Element, attributeName: string, bindings: any, refs: any, customComponents: Set<string>):ReplacementResult {
-    const [key, value] = attributeName.split(' in ');
-    const placement = getDOMPlacement(node);
-    const getListValue = new Function(`with(this){return ${value}}`).bind(bindings);
+function addIf(node: Element, expression: string, bindings: any, dynamicNodes: DynamicNodeMap):ReplacementResult {
+    const placement = getDOMPlacement(node, dynamicNodes);
+    const getConditionResult = evaluateExpression(expression, bindings);
+    let isVisible = true;
 
-    // Remove node from the DOM
-    node.remove();
+    dynamicNodes.set(node, () => {
+        return isVisible ? [DOMPlacement.INSERT_AFTER, node] : placement;
+    });
+
+    return effect(() => {
+        isVisible = !!getConditionResult();
+
+        if (isVisible) {
+            restoreDOMPlacement(node, placement);
+        } else {
+            node.remove();
+        }
+    });
+}
+
+function addElse(node: Element, expression: string, bindings: any, dynamicNodes: DynamicNodeMap):ReplacementResult {
+    const placement = getDOMPlacement(node, dynamicNodes);
+    const getConditionResult = evaluateExpression(expression, bindings);
+    let isVisible = true;
+
+    dynamicNodes.set(node, () => {
+        return isVisible ? [DOMPlacement.INSERT_AFTER, node] : placement;
+    });
+
+    return effect(() => {
+        isVisible = !getConditionResult();
+
+        if (isVisible) {
+            restoreDOMPlacement(node, placement);
+        } else {
+            node.remove();
+        }
+    });
+}
+
+function addFor(node: Element, attributeName: string, bindings: any, refs: any, customComponents: Set<string>, dynamicNodes: DynamicNodeMap):ReplacementResult {
+    const [key, value] = attributeName.split(' in ');
+    const placement = getDOMPlacement(node, dynamicNodes);
+    const getListValue = evaluateExpression(value, bindings);
 
     let listDispose:ReplacementResult[] = [];
     let listItems:HTMLElement[] = [];
+    let lastListItem:HTMLElement|null = null;
+
+    // Because we are adding / removing nodes from the DOM, we need to keep track of the last list item
+    // if element after last list item is also dynamic
+    dynamicNodes.set(node, () => {
+        return lastListItem ? [DOMPlacement.INSERT_AFTER, lastListItem] : placement;
+    });
+
+    // Remove node after renderer has stopped traversing the DOM
+    requestAnimationFrame(() => {
+        node.remove();
+    });
 
     return effect(() => {
         listDispose.forEach((dispose) => dispose());
         listItems.forEach((item) => item.remove());
         listDispose = [];
         listItems = [];
+        lastListItem = null;
 
         const list = getListValue();
-        let lastListItem:HTMLElement|null = null;
 
         if (Array.isArray(list)) {
             untracked(() => {
@@ -199,7 +280,7 @@ function addFor(node: Element, attributeName: string, bindings: any, refs: any, 
  * @param bindings - Bindings
  * @param refs - TemplateRefs
  */
-function findAttributeReplacements(node: Element, bindings: any, refs: any, customComponents: Set<string>):ReplacementResult[] {
+function findAttributeReplacements(node: Element, bindings: any, refs: any, customComponents: Set<string>, dynamicNodes: DynamicNodeMap):ReplacementResult[] {
     const attributes = node.attributes;
     const dispose = [];
     const isCustomComponent = customComponents.has(node.localName);
@@ -210,7 +291,15 @@ function findAttributeReplacements(node: Element, bindings: any, refs: any, cust
         const name = attribute.name;
         const value = attribute.value;
 
-        if (name === 'v-show') {
+        if (name === 'v-if') {
+            if (node.nextElementSibling && node.nextElementSibling.attributes.getNamedItem('v-else')) {
+                dispose.push(addElse(node.nextElementSibling, value, bindings, dynamicNodes));
+            }
+
+            dispose.push(addIf(node, value, bindings, dynamicNodes));
+        } else if (name === 'v-else') {
+            // Do nothing, it's already handled by v-if
+        } else if (name === 'v-show') {
             dispose.push(addConditional(node, value, bindings));
         } else if (name === 'v-hide') {
             dispose.push(addConditional(node, `!(${ value })`, bindings));
@@ -254,6 +343,7 @@ function findAttributeReplacements(node: Element, bindings: any, refs: any, cust
 
 function renderElement(templateElement: HTMLElement, bindings: any, refs: any, customComponents: Set<string>): ReplacementResult[] {
     const disposeList:Array<() => void> = [];
+    const dynamicNodes:DynamicNodeMap = new Map();
 
     traverseDOM(templateElement, (node, _index) => {
         if (node.nodeType === Node.TEXT_NODE) {
@@ -267,12 +357,12 @@ function renderElement(templateElement: HTMLElement, bindings: any, refs: any, c
             if (vForValue) {
                 element.removeAttribute('v-for');
                 disposeList.push(
-                    addFor(element, vForValue, bindings, refs, customComponents)
+                    addFor(element, vForValue, bindings, refs, customComponents, dynamicNodes)
                 );
                 return false;
             } else {
                 // Attribute replacements
-                findAttributeReplacements(element, bindings, refs, customComponents)
+                findAttributeReplacements(element, bindings, refs, customComponents, dynamicNodes)
                     .forEach((dispose) => disposeList.push(dispose));
             }
         }

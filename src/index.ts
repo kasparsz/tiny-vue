@@ -119,6 +119,10 @@ function useTemplateRef(name: string) {
     return context[ContextMethods.templateRefs][name];
 }
 
+function nextTick(callback: () => void) {
+    (window.requestIdleCallback || window.requestAnimationFrame)(callback);
+}
+
 function defineComponent(name: string, definitionCallback: (...args: any[]) => void) {
     class CustomElement extends HTMLElement {
         // We use enums for minification, private properties create additional code
@@ -195,4 +199,5 @@ export {
     defineEmits,
     useTemplateRef,
     render,
+    nextTick,
 };

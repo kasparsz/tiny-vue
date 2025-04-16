@@ -6,7 +6,7 @@ Minimalistic Vue implementation:
 * only dependency is @webreflection/signal (528 bytes)
 * implements only a subset of VUE features
 
-Minified: 6.4 Kb, gzip: 3.7Kb
+Minified: 6.32 Kb, gzip: 2.74Kb, brotli: 2.44Kb
 
 ## Install 
 
@@ -16,7 +16,8 @@ npm install @kasparsz/tiny-vue
 
 ## ToDo list
 
-* `v-if`, `v-else`, `v-else-if`
+* `v-else-if`
+* `v-model`
 * named slots
 * don't use Shadow DOM, it breaks styling
 * CSS styles
