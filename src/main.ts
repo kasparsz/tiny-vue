@@ -16,6 +16,10 @@ defineComponent('example-heading', () => {
                 <slot></slot>
             </p>
         </div>
+    `, `
+        h1 {
+            color: red;
+        }
     `, {
         // Pass all used props, variables, etc.
         title: props.title,
@@ -85,11 +89,14 @@ const exampleComponent = defineComponent('example-component', () => {
                 Text count: {{ withTexts.value ? texts.length : 0 }}<br />
                 Item count: {{ withItems.value ? items.length : 0 }}
             </p>
-            <p v-if="(timer % 2) && withTimerText.value">
-                v-if: Timer is odd
+            <p v-if="timer % 3 === 0">
+                v-if: Aaa
+            </p>
+            <p v-else-if="timer % 3 === 1">
+                v-else-if: Bbb
             </p>
             <p v-else>
-                v-else: Timer is even
+                v-else: Ccc
             </p>
             <p v-for="text in (withTexts.value ? texts : [])" style="border: 1px dashed #ccc; padding: 10px;">
                 v-for: {{ text }}: {{ timer }}
@@ -112,8 +119,6 @@ const exampleComponent = defineComponent('example-component', () => {
     });
 });
 
-
-(window as any).withTimerText = ref(true);
 (window as any).withTexts = ref(true);
 (window as any).withItems = ref(true);
 

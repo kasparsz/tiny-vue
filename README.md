@@ -6,7 +6,7 @@ Minimalistic Vue implementation:
 * only dependency is @webreflection/signal (528 bytes)
 * implements only a subset of VUE features
 
-Minified: 6.32 Kb, gzip: 2.74Kb, brotli: 2.44Kb
+Minified: 6.17 Kb, gzip: 2.71Kb, brotli: 2.42Kb
 
 ## Install 
 
@@ -16,17 +16,24 @@ npm install @kasparsz/tiny-vue
 
 ## ToDo list
 
-* `v-else-if`
 * `v-model`
 * named slots
-* don't use Shadow DOM, it breaks styling
-* CSS styles
 
 ## Beyond the scope / won't implement
 
 * `:is="..."`
 * `<Transition>`
 * `<TransitionGroup>`
+* `effect` - use `watchEffect` instead
+
+## Features
+
+* Attributes `v-for`, `v-if`, `v-else-if`, `v-else`, `v-show`, `v-hide`, `ref`
+* Dynamic properties using `:dynamic-props="..."`
+* `defineEmits` and adding event listeners using `@event-listeners`
+* Methods `onMounted`, `onUnmounted`, `useTemplateRef`, `defineProps`, `defineExpose`, `nextTick`
+* Reactivity using `ref`, `computed`, `watchEffect`
+* CSS, but it's scoped to the component
 
 ## Example
 
@@ -45,7 +52,7 @@ Create component
 defineComponent('example-heading', () => {
     const props = defineProps({ title: '' });
 
-    // Template is rendered using `render(templateString, bindings)`
+    // Template is rendered using `render(templateString, styles?, bindings)`
     return render(`
         <div>
             <h1>
@@ -109,7 +116,7 @@ defineComponent('example-component', () => {
         timer,
     });
 
-    // Template is rendered using `render(templateString, bindings)`
+    // Template is rendered using `render(templateString, styles?, bindings)`
     render(`
         <div ref="root" class="component" :class="className">
             <h1 @click="onClick">{{ fullTitle }}</h1>
@@ -179,4 +186,33 @@ setTimeout(() => {
     props.title.value = 'Jane';
     props.count.value = 2;
 }, 1000);
+```
+
+## Styling
+
+Because this library is implemented using customElements styles are scoped.  
+
+```js
+defineComponent('example-heading', () => {
+    const props = defineProps({ title: '' });
+
+    return render(`
+        <h1>
+            {{ title }}
+        </h1>
+    `, `
+        h1 {
+            color: red;
+        }
+    `, {
+        title: props.title,
+    });
+});
+```
+
+Styles are not dynamic and this __WILL NOT WORK__
+```css
+h1 {
+    color: {{ color }}; // WILL NOT WORK!!!
+}
 ```

@@ -1,5 +1,5 @@
 // @ts-ignore
-import { signal, Signal, untracked } from '@webreflection/signal';
+import { effect, computed, signal, untracked, Signal } from '@webreflection/signal';
 
 const symbolPeek = Symbol();
 
@@ -90,7 +90,7 @@ class ReactiveObjectClass {}
  *         console.log(`${ data.name } is ${ data.age } years old`);
  *     });
  */
-export function reactive(...states: Record<string, any>[]) {
+function reactive(...states: Record<string, any>[]) {
     const signalState: Record<string|symbol, any> = Array.isArray(states[0]) ? [] : {};
 
     untracked(() => {
@@ -118,3 +118,5 @@ export function reactive(...states: Record<string, any>[]) {
         getPrototypeOf: () => ReactiveObjectClass.prototype
     });
 }
+
+export { effect, computed, signal, reactive, untracked, Signal };

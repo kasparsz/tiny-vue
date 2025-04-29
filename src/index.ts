@@ -1,5 +1,4 @@
-import { signal, Signal, computed, effect } from '@webreflection/signal';
-import { type ReactiveObject, reactive } from './signal-reactive';
+import { type ReactiveObject, reactive, effect, computed, signal, Signal } from './signal-reactive';
 import { type RenderResult, type TemplateRefs, renderTemplate } from './render';
 
 enum ContextMethods {
@@ -62,7 +61,12 @@ function onAttributeChanged(self: any, mutations: MutationRecord[]) {
     }
 }
 
-function render(template: string, bindings: any) {
+function render(template: string, style?: string|any, bindings?: any) {
+    if (typeof style !== 'string') {
+        bindings = style;
+        style = undefined;
+    }
+
     const context = getContext('render');
     const allBindings = reactive(bindings, context[ContextMethods.props] || {});
 
@@ -72,6 +76,12 @@ function render(template: string, bindings: any) {
     if (context[ContextMethods.renderResult]) {
         const shadow = context.attachShadow({ mode: "open" });
         shadow.appendChild(context[ContextMethods.renderResult].element);
+
+        if (style) {
+            const sheet = new CSSStyleSheet();
+            sheet.replaceSync(style);
+            shadow.adoptedStyleSheets = [sheet];
+        }
     }
 }
 
