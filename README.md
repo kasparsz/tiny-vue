@@ -6,7 +6,7 @@ Minimalistic Vue implementation:
 * only dependency is @webreflection/signal (528 bytes)
 * implements only a subset of VUE features
 
-Minified: 6.17 Kb, gzip: 2.71Kb, brotli: 2.42Kb
+Minified: 6.88 Kb, gzip: 2.97Kb, brotli: 2.69Kb
 
 ## Install 
 
@@ -16,8 +16,9 @@ npm install @kasparsz/tiny-vue
 
 ## ToDo list
 
-* `v-model`
 * named slots
+* Named model, eg `v-model:title`
+* Event listener support where `@event="doSomething($event)`
 
 ## Beyond the scope / won't implement
 
@@ -28,7 +29,7 @@ npm install @kasparsz/tiny-vue
 
 ## Features
 
-* Attributes `v-for`, `v-if`, `v-else-if`, `v-else`, `v-show`, `v-hide`, `ref`
+* Attributes `v-for`, `v-if`, `v-else-if`, `v-else`, `v-show`, `v-hide`, `ref`, `v-model`
 * Dynamic properties using `:dynamic-props="..."`
 * `defineEmits` and adding event listeners using `@event-listeners`
 * Methods `onMounted`, `onUnmounted`, `useTemplateRef`, `defineProps`, `defineExpose`, `nextTick`

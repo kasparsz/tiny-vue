@@ -1,16 +1,38 @@
-import { defineComponent, ref, computed, onMounted, onUnmounted, useTemplateRef, defineProps, defineExpose, defineEmits, render } from './index';
+import { defineComponent, ref, computed, onMounted, onUnmounted, useTemplateRef, defineProps, defineExpose, defineEmits, defineModel, render } from './index';
 
 (window as any).defineComponent = defineComponent;
+
+
+/**
+ * Timer composable
+ */
+function useTimer() {
+    const timer = ref(0);
+    let timerHandle = 0;
+
+    onMounted(() => {
+        timerHandle = setInterval(() => {
+            timer.value++;
+        }, 1000);
+    });
+
+    onUnmounted(() => {
+        clearInterval(timerHandle);
+    });
+
+    return timer;
+}
 
 defineComponent('example-heading', () => {
     const props = defineProps({ title: '' });
     const emit = defineEmits();
+    const timer = useTimer();
 
     // Template is rendered using `render(templateString, bindings)`
     return render(`
         <div>
             <h1 @click="onClick">
-                {{ title }}
+                {{ title }} <span>Local timer: {{ timer }}</span>
             </h1>
             <p>
                 <slot></slot>
@@ -22,10 +44,22 @@ defineComponent('example-heading', () => {
         }
     `, {
         // Pass all used props, variables, etc.
+        timer,
         title: props.title,
         onClick: () => {
             emit('clicked', 'Arg 1', { arg2: 'Arg 2' });
         },
+    });
+});
+
+defineComponent('example-input', () => {
+    // const props = defineProps({});
+    const model = defineModel();
+
+    return render(`
+        <input v-model="model" />
+    `, {
+        model,
     });
 });
 
@@ -37,9 +71,13 @@ const exampleComponent = defineComponent('example-component', () => {
         count: 0
     });
 
-    // Reactive value
-    const timer = ref(0);
-    let timerHandle = 0;
+    const inputValue = ref('text');
+
+    // State
+    const clicks = ref(0);
+
+    // Composable
+    const timer = useTimer();
 
     // Computed values
     const fullTitle = computed(() => `Hello ${props.title}`);
@@ -54,6 +92,7 @@ const exampleComponent = defineComponent('example-component', () => {
 
     // Event listeners
     const onClick = (event: MouseEvent) => {
+        clicks.value++;
         console.log('Clicked', event);
     };
 
@@ -64,14 +103,10 @@ const exampleComponent = defineComponent('example-component', () => {
     // When component is mounted template element references exist
     onMounted(() => {
         console.log('Mounted:', rootElementRef.value);
-
-        timerHandle = setInterval(() => {
-            timer.value++;
-        }, 1000);
     });
 
     onUnmounted(() => {
-        clearInterval(timerHandle);
+        console.log('unmounted example-component');
     });
 
     // Expose values onto HTML element
@@ -83,7 +118,12 @@ const exampleComponent = defineComponent('example-component', () => {
     // Template is rendered using `render(templateString, bindings)`
     render(`
         <div ref="root" class="component" :class="className">
-            <h1 @click="onClick">{{ fullTitle }}</h1>
+            <h1 @click="onClick">{{ fullTitle }}, you clicked me {{ clicks }} times</h1>
+            <input v-model="inputValue" />
+            <example-input v-model="inputValue"></example-input>
+            <p>
+                Input value: {{ inputValue }}
+            </p>
             <p>
                 Timer: {{ timer }} ({{ timer % 2 ? 'odd' : 'even' }})<br />
                 Text count: {{ withTexts.value ? texts.length : 0 }}<br />
@@ -111,9 +151,11 @@ const exampleComponent = defineComponent('example-component', () => {
         </div>
     `, {
         items,
+        clicks,
         className,
         fullTitle,
         timer,
+        inputValue,
         onClick,
         onHeadingClicked,
     });

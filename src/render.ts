@@ -121,6 +121,10 @@ function addAttribute(node: Element, attributeName: string, expression: string, 
         return effect(() => {
             (node as HTMLElement).innerHTML = resultToString(fn());
         });
+    } else if (attributeName === 'value') {
+        return effect(() => {
+            (node as HTMLInputElement).value = resultToString(fn());
+        });
     } else {
         return effect(() => {
             (node as HTMLElement).setAttribute(attributeName, attributeValue + resultToAttributeValue(fn()));
@@ -255,6 +259,28 @@ function findAttributeReplacements(node: Element, bindings: any, refs: any, cust
             dispose.push(addConditional(node, value, bindings));
         } else if (name === 'v-hide') {
             dispose.push(addConditional(node, `!(${ value })`, bindings));
+        } else if (name === 'v-model') {
+            let eventName = isCustomComponent ? 'update:modelValue' : 'input';
+
+            if (isCustomComponent) {
+                // @TODO add support for named models `v-model:title`
+                customComponentProps['modelValue'] = addProp(node, name, value, bindings);
+            } else {
+                dispose.push(addAttribute(node, 'value', value, bindings));
+            }
+
+            // When input or custom element triggers 'update:modelValue', we need to trigger the event on the root node
+            node.addEventListener(eventName, function (event) {
+                const inputValue = event.type === 'update:modelValue' ? (event as CustomEvent).detail.args[0] : (event.target as HTMLInputElement).value;
+
+                // Update the binding value, because model is 2 way binding
+                bindings[value] = inputValue;
+
+                // Dispatch the event on the root node
+                const updateEvent = new CustomEvent('update:modelValue', { detail: { tinyVue: true, args: [inputValue] }, bubbles: false });
+                const rootNode = node.getRootNode() as any;
+                rootNode?.host.dispatchEvent(updateEvent);
+            });
         } else if (name[0] === '@') {
             addEventListener(node, name.substring(1), value, bindings);
         } else if (name[0] === ':' || name === ATTR_V_HTML) {

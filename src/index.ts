@@ -11,8 +11,10 @@ enum ContextMethods {
 
     rendered,
     renderResult,
+    models,
     props,
     propsInit,
+    propsInitialized,
     templateRefs,
     onMountedCallbacks,
     onUnmountedCallbacks,
@@ -20,6 +22,8 @@ enum ContextMethods {
 };
 
 type propsType = Record<string, any>;
+type modelPropsType = { default?: any };
+type modelType = [string, Signal<any>];
 
 const customComponents: Set<string> = new Set();
 let context: any[] = [];
@@ -68,7 +72,21 @@ function render(template: string, style?: string|any, bindings?: any) {
     }
 
     const context = getContext('render');
+
+    // Initialize props if not initialized
+    if (!context[ContextMethods.propsInitialized]) {
+        defineProps({});
+    }
+
+    // Create reactive bindings from props
     const allBindings = reactive(bindings, context[ContextMethods.props] || {});
+
+    // Bind model values to props
+    context[ContextMethods.models].forEach(([name, refValue]: [string, Signal<any>]) => {
+        effect(() => {
+            refValue.value = allBindings[name];
+        });
+    });
 
     context[ContextMethods.renderResult] = renderTemplate(template, allBindings, context[ContextMethods.templateRefs], customComponents);
 
@@ -95,6 +113,23 @@ function defineEmits() {
     };
 }
 
+function defineModel(name?: string, props?: modelPropsType) {
+    if (typeof props === 'object' && !name) {
+        props = name as modelPropsType;
+        name = 'model';
+    } else if (!name) {
+        name = 'model';
+    }
+
+    const context = getContext('defineModel');
+    const signalValue = signal(props?.default || '');
+
+    context[ContextMethods.models] = context[ContextMethods.models] || [];
+    context[ContextMethods.models].push([name + 'Value', signalValue]);
+
+    return signalValue;
+}
+
 function defineProps(propsDefaults: propsType) {
     const context = getContext('defineProps');
 
@@ -102,6 +137,8 @@ function defineProps(propsDefaults: propsType) {
         acc[attr.name] = normalizeAttributeValue(attr.value);
         return acc;
     }, {});
+
+    context[ContextMethods.propsInitialized] = true;
 
     const propsInit = context[ContextMethods.propsInit] || {};
     const propsValues = Object.assign(propsDefaults, propsFromAttributes, propsInit);
@@ -139,7 +176,9 @@ function defineComponent(name: string, definitionCallback: (...args: any[]) => v
         [ContextMethods.rendered]: boolean = false;
         [ContextMethods.renderResult]: RenderResult | null = null;
         [ContextMethods.props]: ReactiveObject | null = null;
+        [ContextMethods.models]: modelType[] = [];
         [ContextMethods.propsInit]: propsType | null = null;
+        [ContextMethods.propsInitialized]: boolean = false;
         [ContextMethods.templateRefs]: TemplateRefs = {};
         [ContextMethods.onMountedCallbacks]: (() => void)[] = [];
         [ContextMethods.onUnmountedCallbacks]: (() => void)[] = [];
@@ -205,6 +244,7 @@ export {
     onMounted,
     onUnmounted,
     defineProps,
+    defineModel,
     defineExpose,
     defineEmits,
     useTemplateRef,
