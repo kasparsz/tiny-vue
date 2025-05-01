@@ -6,7 +6,7 @@ Minimalistic Vue implementation:
 * only dependency is @webreflection/signal (528 bytes)
 * implements only a subset of VUE features
 
-Minified: 6.88 Kb, gzip: 2.97Kb, brotli: 2.69Kb
+Minified: 7.08 Kb, gzip: 3.03Kb, brotli: 2.73Kb
 
 ## Install 
 
@@ -45,7 +45,7 @@ import { defineComponent } from '@kasparsz/tiny-vue';
 Additional functions which can be imported.
 
 ```js
-import { defineComponent, ref, reactive, computed, watchEffect, onMounted, onUnmounted, useTemplateRef, defineProps, defineExpose, defineEmits, render } from '@kasparsz/tiny-vue';
+import { defineComponent, ref, reactive, computed, watchEffect, toValue, onMounted, onUnmounted, useTemplateRef, defineProps, defineExpose, defineEmits, render } from '@kasparsz/tiny-vue';
 ```
 
 Create component

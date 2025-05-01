@@ -1,4 +1,4 @@
-import { effect, Signal } from '../signal-reactive';
+import { effect, toValue } from '../signal-reactive';
 import { getContext } from './context';
 
 /**
@@ -12,7 +12,7 @@ export function defineExpose(values: Record<string, any>) {
     const self = context;
     effect(() => {
         for (const key in values) {
-            self[key] = values[key] instanceof Signal ? values[key].value : values[key];
+            self[key] = toValue(values[key]);
         }
     });
 }

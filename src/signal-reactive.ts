@@ -4,7 +4,7 @@ import type { Computed } from '@webreflection/signal';
 
 export type { Computed };
 
-const symbolPeek = Symbol();
+const getRawSymbol = Symbol();
 const ARRAY_REMOVE_METHODS = ['pop', 'shift', 'splice'];
 
 /**
@@ -15,8 +15,10 @@ const ARRAY_REMOVE_METHODS = ['pop', 'shift', 'splice'];
  * @returns {any} Property value
  */
 function getProp (target: any, key: string | symbol) {
-    if (key === symbolPeek) {
+    if (key === getRawSymbol) {
         return (key: string) => target[key];
+    } else if (key === 'peek') {
+        return target;
     } else if (Array.isArray(target) && ARRAY_REMOVE_METHODS.includes(key as string)) {
         // Bind array methods to the target, otherwise it doesn't modify actual array length
         return target[key as any].bind(target);
@@ -75,10 +77,13 @@ function setProp (target: Record<string|symbol, any>, key: string | symbol, valu
  */
 export interface ReactiveObject {
     [key: string]: any;
-    [symbolPeek]: (key: string) => any;
+    peek: () => any;
+    [getRawSymbol]: (key: string) => any;
 }
 
-class ReactiveObjectClass {}
+class ReactiveObjectClass {
+    peek () {}
+}
 
 /**
  * Returns an object from the state, which uses
@@ -108,7 +113,7 @@ function reactive(...states: Record<string, any>[]) {
             if (state instanceof ReactiveObjectClass) {
                 // Copy signals, so that changing old object value also changes
                 // new object value and vice-versa
-                const getRaw = (state as ReactiveObject)[symbolPeek];
+                const getRaw = (state as ReactiveObject)[getRawSymbol];
                 for (let key in state) {
                     setProp(signalState, key, getRaw(key));
                 }
@@ -129,4 +134,19 @@ function reactive(...states: Record<string, any>[]) {
     });
 }
 
-export { effect, computed, signal, reactive, untracked, Signal };
+/**
+ * Converts reactive object to value
+ * @param value - Value
+ * @returns Value
+ */
+function toValue(value: any) {
+    if (value instanceof Signal) {
+        return value.value;
+    } else if (value instanceof ReactiveObjectClass) {
+        return value.peek;
+    } else {
+        return value;
+    }
+}
+
+export { effect, computed, signal, reactive, untracked, Signal, toValue };
