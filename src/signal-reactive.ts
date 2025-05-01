@@ -1,7 +1,11 @@
 // @ts-ignore
 import { effect, computed, signal, untracked, Signal } from '@webreflection/signal';
+import type { Computed } from '@webreflection/signal';
+
+export type { Computed };
 
 const symbolPeek = Symbol();
+const ARRAY_REMOVE_METHODS = ['pop', 'shift', 'splice'];
 
 /**
  * Returns property from target
@@ -13,14 +17,20 @@ const symbolPeek = Symbol();
 function getProp (target: any, key: string | symbol) {
     if (key === symbolPeek) {
         return (key: string) => target[key];
-    } else if (Array.isArray(target) && key in Array.prototype) {
-        return target[key as keyof Array<any>];
-    } else if (target[key] && 'value' in target[key]) {
+    } else if (Array.isArray(target) && ARRAY_REMOVE_METHODS.includes(key as string)) {
+        // Bind array methods to the target, otherwise it doesn't modify actual array length
+        return target[key as any].bind(target);
+    } else if (target[key] && typeof target[key] === 'object' && 'value' in target[key]) {
+        // Return signal value
         return target[key] && target[key].value;
+    } else if (!(key in target) && !Array.isArray(target)) {
+        // If property does not exist, create it, but not for arrays because that would modify the array length
+        return (target[key] = signal(undefined)).value;
     } else {
         return target[key];
     }
 }
+
 
 /**
  * Set property to target

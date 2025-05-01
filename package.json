@@ -1,6 +1,6 @@
 {
   "name": "@kasparsz/tiny-vue",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Minimalistic subset of Vue implementation which generates custom elements",
   "keywords": [
     "minimalistic",
@@ -26,13 +26,15 @@
     "build": "tsc && vite build && npm run compress && npm run check-compression-rate",
     "compress": "terser --compress  --mangle --module dist/tiny-vue.js -o dist/tiny-vue.min.js",
     "check-compression-rate": "node check-compression-rate.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest --run"
   },
   "devDependencies": {
     "terser": "^5.39.0",
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
-    "vite-plugin-dts": "^4.5.3"
+    "vite-plugin-dts": "^4.5.3",
+    "vitest": "^3.1.2"
   },
   "dependencies": {
     "@webreflection/signal": "^2.1.2"
