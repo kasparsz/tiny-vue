@@ -45,7 +45,7 @@ function setProp (target: Record<string|symbol, any>, key: string | symbol, valu
     if (value instanceof Signal) {
         target[key] = value;
     } else if (Array.isArray(target) && key in Array.prototype) {
-        // target[key as keyof Array<any>] = value;
+        // Don't allow overwriting array methods
     } else if (key in target) {
         target[key].value = value;
     } else {

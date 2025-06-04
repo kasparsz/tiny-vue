@@ -5,6 +5,7 @@ import { addAttribute } from './add-attribute';
 import { addProp } from './add-prop';
 import { addShowHide } from './add-show-hide';
 import { addEventListener } from './add-event-listener';
+import { addBind } from './add-bind';
 
 import type { DisposeList } from './render.types';
 import type { Computed } from '../signal-reactive';
@@ -57,6 +58,8 @@ export function addAttributes(node: Element, bindings: any, refs: any, customCom
             dispose.push(addShowHide(node, value, bindings));
         } else if (name === 'v-hide') {
             dispose.push(addShowHide(node, `!(${ value })`, bindings));
+        } else if (name === 'v-bind') {
+            dispose.push(addBind(node, value, bindings, customComponents, customComponentProps));
         } else if (name === 'v-model') {
             let eventName = isCustomComponent ? 'update:modelValue' : 'input';
 

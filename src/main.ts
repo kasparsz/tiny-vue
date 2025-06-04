@@ -63,6 +63,23 @@ defineComponent('example-input', () => {
     });
 });
 
+defineComponent('example-person', () => {
+    defineProps({
+        firstName: '',
+        lastName: '',
+        age: 0,
+    });
+
+    return render(`
+        <div>
+            <p>
+                Hello {{ firstName }} {{ lastName }}, you are {{ age }} years old
+            </p>
+        </div>
+    `, {
+    });
+});
+
 const exampleComponent = defineComponent('example-component', () => {
     // `props` will contain all passed in props, including HTML element attributes
     const props = defineProps({
@@ -75,6 +92,9 @@ const exampleComponent = defineComponent('example-component', () => {
 
     // State
     const clicks = ref(0);
+
+    // v-bind data
+    const vBindData = { firstName: 'John', lastName: 'Doe' };
 
     // Composable
     const timer = useTimer();
@@ -122,8 +142,12 @@ const exampleComponent = defineComponent('example-component', () => {
             <input v-model="inputValue" />
             <example-input v-model="inputValue"></example-input>
             <p>
-                Input value: {{ inputValue }}
+            Input value: {{ inputValue }}
             </p>
+
+            <p>Binding:</p>
+            <example-person v-bind="vBindData"></example-person>
+
             <p>
                 Timer: {{ timer }} ({{ timer % 2 ? 'odd' : 'even' }})<br />
                 Text count: {{ withTexts.value ? texts.length : 0 }}<br />
@@ -158,6 +182,7 @@ const exampleComponent = defineComponent('example-component', () => {
         inputValue,
         onClick,
         onHeadingClicked,
+        vBindData,
     });
 });
 

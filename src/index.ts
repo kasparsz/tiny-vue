@@ -1,4 +1,4 @@
-import { reactive, effect, computed, signal, Signal } from './signal-reactive';
+import { reactive, effect, computed, signal, Signal, toValue } from './signal-reactive';
 import { renderTemplate } from './render/render-template';
 import { normalizeAttributeValue } from './utils/normalize-attribute-value';
 import { getContext, setContext, popContext, ContextMethodRendered, ContextMethodRenderResult, ContextMethodModels, ContextMethodProps, ContextMethodPropsInit, ContextMethodPropsInitialized, ContextMethodTemplateRefs, ContextMethodOnMountedCallbacks, ContextMethodOnUnmountedCallbacks, ContextMethodMutationObserver } from './methods/context';
@@ -164,4 +164,5 @@ export {
     useTemplateRef,
     render,
     nextTick,
+    toValue,
 };

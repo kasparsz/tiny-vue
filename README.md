@@ -29,7 +29,7 @@ npm install @kasparsz/tiny-vue
 
 ## Features
 
-* Attributes `v-for`, `v-if`, `v-else-if`, `v-else`, `v-show`, `v-hide`, `ref`, `v-model`
+* Attributes `v-for`, `v-if`, `v-else-if`, `v-else`, `v-show`, `v-hide`, `ref`, `v-model`, `v-bind`
 * Dynamic properties using `:dynamic-props="..."`
 * `defineEmits` and adding event listeners using `@event-listeners`
 * Methods `onMounted`, `onUnmounted`, `useTemplateRef`, `defineProps`, `defineExpose`, `nextTick`
